@@ -1,0 +1,2413 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Studio — Editable PDF, EPUB &amp; Word Converter (English + বাংলা)</title>
+  <meta name="description" content="100% browser-based converter that turns scanned PDFs, Bijoy ANSI PDFs, and broken Bangla Unicode PDFs into clean, editable, copy-pastable PDF, EPUB 3, DOCX, and TXT files with no page limits." />
+
+  <!-- Fonts for UI & Preview -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@400;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Core Client-Side Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0b1020;
+      --bg-elev: #131a2e;
+      --bg-card: #172038;
+      --bg-input: #0f1629;
+      --border: #273456;
+      --border-hover: #4f6ef7;
+      --text: #eef2ff;
+      --text-muted: #9aa8c7;
+      --accent: #4f6ef7;
+      --accent-hover: #6480ff;
+      --accent-soft: rgba(79, 110, 247, 0.14);
+      --success: #10b981;
+      --success-soft: rgba(16, 185, 129, 0.14);
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+      --radius: 14px;
+    }
+
+    [data-theme="light"] {
+      --bg: #f4f7fb;
+      --bg-elev: #ffffff;
+      --bg-card: #ffffff;
+      --bg-input: #f8fafc;
+      --border: #dce3f0;
+      --border-hover: #3b5bdb;
+      --text: #0f172a;
+      --text-muted: #526077;
+      --accent: #3b5bdb;
+      --accent-hover: #2f4ac4;
+      --accent-soft: rgba(59, 91, 219, 0.10);
+      --success: #059669;
+      --success-soft: rgba(5, 150, 105, 0.10);
+      --warn: #d97706;
+      --danger: #dc2626;
+      --shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', 'Noto Serif Bengali', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-elev);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      backdrop-filter: blur(12px);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #4f6ef7, #8b5cf6);
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 18px;
+      box-shadow: 0 4px 14px rgba(79, 110, 247, 0.4);
+    }
+
+    .brand h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .brand p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .header-badges {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 5px 11px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid rgba(79, 110, 247, 0.25);
+    }
+
+    .pill.green {
+      background: var(--success-soft);
+      color: var(--success);
+      border-color: rgba(16, 185, 129, 0.25);
+    }
+
+    .btn-icon {
+      background: var(--bg-input);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 7px 12px;
+      border-radius: 9px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 500;
+      transition: 0.15s;
+    }
+
+    .btn-icon:hover {
+      border-color: var(--border-hover);
+    }
+
+    main {
+      margin-top: 26px;
+      display: grid;
+      gap: 22px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 38px 24px;
+      text-align: center;
+      background: var(--bg-input);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .dropzone-icon {
+      font-size: 2.3rem;
+      margin-bottom: 8px;
+    }
+
+    .dropzone h2 {
+      font-size: 1.15rem;
+      margin-bottom: 6px;
+    }
+
+    .dropzone p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      max-width: 580px;
+      margin: 0 auto 16px;
+    }
+
+    .file-selected-bar {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .file-selected-bar.active {
+      display: flex;
+    }
+
+    .file-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      word-break: break-all;
+    }
+
+    .file-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .field select, .field input[type="text"] {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text);
+      font-size: 0.88rem;
+      outline: none;
+    }
+
+    .field select:focus, .field input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    .toggles-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-label input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+    }
+
+    .actions-row {
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      padding: 11px 24px;
+      border-radius: 10px;
+      font-size: 0.94rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: none;
+    }
+
+    .progress-box {
+      display: none;
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 11px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+    }
+
+    .progress-box.active {
+      display: block;
+    }
+
+    .progress-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #4f6ef7, #10b981);
+      transition: width 0.18s ease;
+    }
+
+    .status-log {
+      margin-top: 8px;
+      font-size: 0.79rem;
+      color: var(--text-muted);
+    }
+
+    /* Export Section */
+    .results-section {
+      display: none;
+      gap: 22px;
+    }
+
+    .results-section.active {
+      display: grid;
+    }
+
+    .export-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .export-card {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      transition: 0.15s;
+    }
+
+    .export-card:hover {
+      border-color: var(--border-hover);
+    }
+
+    .export-card h3 {
+      font-size: 0.98rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .export-card p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .btn-download {
+      width: 100%;
+      padding: 9px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .btn-download:hover:not(:disabled) {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-download:disabled {
+      opacity: 0.55;
+      cursor: wait;
+    }
+
+    /* Live Editor & Preview */
+    .editor-layout {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    @media (max-width: 780px) {
+      .editor-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .sidebar-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 12px;
+      max-height: 520px;
+      overflow-y: auto;
+    }
+
+    .sidebar-box h4 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .bm-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bm-item:hover, .bm-item.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .editor-pane {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .page-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.86rem;
+    }
+
+    .page-nav input {
+      width: 64px;
+      text-align: center;
+      padding: 5px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text);
+    }
+
+    textarea.page-editor {
+      width: 100%;
+      min-height: 430px;
+      resize: vertical;
+      background: var(--bg-card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Noto Serif Bengali', 'Inter', serif;
+      font-size: 0.96rem;
+      line-height: 1.7;
+      outline: none;
+    }
+
+    textarea.page-editor:focus {
+      border-color: var(--accent);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .section-title h2 {
+      font-size: 1.08rem;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 36px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container header-inner">
+    <div class="brand">
+      <div class="brand-icon">PDF</div>
+      <div>
+        <h1>PDF Studio — Editable PDF, EPUB &amp; Word</h1>
+        <p>Scanned OCR + Bijoy ANSI &amp; Broken Bangla Unicode Repair</p>
+      </div>
+    </div>
+    <div class="header-badges">
+      <span class="pill green">100% Client-Side Privacy</span>
+      <span class="pill">No Page Limit</span>
+      <button class="btn-icon" id="themeBtn" type="button">Light / Dark</button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <!-- STEP 1: UPLOAD & SETTINGS -->
+  <section class="card">
+    <input type="file" id="fileInput" accept=".pdf,application/pdf" hidden />
+    <div class="dropzone" id="dropzone">
+      <div class="dropzone-icon">📄</div>
+      <h2>Drop your PDF here, or click to browse</h2>
+      <p>Supports scanned English &amp; Bangla ebooks, Bangladesh Gazette / Bijoy (SutonnyMJ) PDFs, broken Print-to-PDF Bangla fonts (Nikosh), and multi-hundred-page books. Nothing leaves your browser.</p>
+      <button class="btn-primary" type="button" id="browseBtn">Choose PDF File</button>
+    </div>
+
+    <div class="file-selected-bar" id="fileBar">
+      <div class="file-meta">
+        <span>📘</span>
+        <div>
+          <div id="fileNameLabel">—</div>
+          <div class="file-sub" id="fileMetaLabel">—</div>
+        </div>
+      </div>
+      <button class="btn-icon" type="button" id="changeFileBtn">Change File</button>
+    </div>
+
+    <div class="settings-grid">
+      <div class="field">
+        <label for="modeSelect">Extraction Pipeline</label>
+        <select id="modeSelect">
+          <option value="auto" selected>Auto-Detect (Recommended)</option>
+          <option value="bangla-font">Bangla Font / Bijoy + GSUB Decoder</option>
+          <option value="pdfjs-text">Fast Digital / Hidden OCR Layer</option>
+          <option value="ocr">Force Fresh Image OCR (Raw Scans)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="ocrLangSelect">OCR Language (if raw scan)</label>
+        <select id="ocrLangSelect">
+          <option value="eng+ben" selected>English + বাংলা (eng+ben)</option>
+          <option value="eng">English Only (Fastest)</option>
+          <option value="ben">বাংলা Only (ben)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="pageRangeInput">Page Range (leave blank for All)</label>
+        <input type="text" id="pageRangeInput" placeholder="e.g. All, or 1-50, or 5,8,10-25" />
+      </div>
+    </div>
+
+    <div class="toggles-row">
+      <label class="checkbox-label">
+        <input type="checkbox" id="chkCleanTypos" checked />
+        Clean scan/OCR typos &amp; dotted leaders
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="chkDeskew" checked />
+        Deskew lines &amp; preserve table columns
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="chkCleanCover" />
+        Strip cover-page library stamp/barcode noise
+      </label>
+    </div>
+
+    <div class="actions-row">
+      <button class="btn-primary" id="convertBtn" type="button" disabled>
+        ⚡ Convert Document Now
+      </button>
+      <button class="btn-danger" id="stopBtn" type="button">
+        Stop &amp; Keep Processed Pages
+      </button>
+    </div>
+
+    <div class="progress-box" id="progressBox">
+      <div class="progress-top">
+        <strong id="progressLabel">Initializing...</strong>
+        <span id="progressStats">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="status-log" id="statusLog">Preparing browser engine...</div>
+    </div>
+  </section>
+
+  <!-- STEP 2: DOWNLOAD OUTPUTS -->
+  <div class="results-section" id="resultsSection">
+    <section class="card">
+      <div class="section-title">
+        <h2>Ready to Download — 4 Clean Formats</h2>
+        <span class="pill green" id="summaryBadge">Converted</span>
+      </div>
+
+      <div class="export-grid">
+        <div class="export-card">
+          <div>
+            <h3>📕 Editable PDF (.pdf)</h3>
+            <p>Crisp vector text on clean white pages, level lines, clickable chapter bookmarks, and copy-pastable Unicode Bangla + English.</p>
+          </div>
+          <button class="btn-download" id="dlPdfBtn" type="button">Download Editable .PDF</button>
+        </div>
+
+        <div class="export-card">
+          <div>
+            <h3>📗 Reflowable Ebook (.epub)</h3>
+            <p>Standard EPUB 3 with automatic chapters, Table of Contents, HTML tables, and clean Unicode text for phones, tablets &amp; Kindle/Calibre.</p>
+          </div>
+          <button class="btn-download" id="dlEpubBtn" type="button">Download .EPUB</button>
+        </div>
+
+        <div class="export-card">
+          <div>
+            <h3>📘 Microsoft Word (.docx)</h3>
+            <p>Formatted Word document with headings, paragraphs, indents, and tables—best for heavy paragraph &amp; Bangla conjunct editing.</p>
+          </div>
+          <button class="btn-download" id="dlDocxBtn" type="button">Download .DOCX</button>
+        </div>
+
+        <div class="export-card">
+          <div>
+            <h3>📝 Clean Unicode (.txt)</h3>
+            <p>Pure UTF-8 text of all converted pages. Download as a file or copy to clipboard in one click.</p>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-download" id="dlTxtBtn" type="button">Save .TXT</button>
+            <button class="btn-download" id="copyAllBtn" type="button">Copy All</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 3: IN-BROWSER LIVE PAGE EDITOR & PREVIEW -->
+    <section class="card">
+      <div class="section-title">
+        <h2>Live Page Preview &amp; Editor</h2>
+        <span style="font-size:0.82rem; color:var(--text-muted);">Any text edits you make below are automatically included in your PDF, EPUB, DOCX &amp; TXT downloads!</span>
+      </div>
+
+      <div class="editor-layout">
+        <div class="sidebar-box">
+          <h4>Detected Bookmarks</h4>
+          <div id="bookmarkList"></div>
+        </div>
+
+        <div class="editor-pane">
+          <div class="editor-toolbar">
+            <div class="page-nav">
+              <button class="btn-icon" id="prevPageBtn" type="button">◀ Prev</button>
+              <span>Page</span>
+              <input type="number" id="pageJumpInput" min="1" value="1" />
+              <span id="pageTotalSpan">of 1</span>
+              <button class="btn-icon" id="nextPageBtn" type="button">Next ▶</button>
+            </div>
+            <button class="btn-icon" id="copyPageBtn" type="button">Copy This Page</button>
+          </div>
+
+          <textarea class="page-editor" id="pageEditor" spellcheck="false" placeholder="Converted page text will appear here..."></textarea>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    Runs 100% locally in your browser • Zero server uploads • Supports English &amp; বাংলা (Unicode + Bijoy + OpenType GSUB)
+  </div>
+</footer>
+
+<script>
+/* =========================================================================
+   PDF STUDIO — COMPLETE CLIENT-SIDE ENGINE
+   1. Binary TrueType cmap + OpenType GSUB + Bijoy ANSI Bangla Decoder
+   2. PDF.js Digital & Hidden-OCR Coordinate Layout Reconstructor
+   3. Streaming Tesseract.js (eng+ben) OCR Fallback for Raw Image Scans
+   4. Exporters: Editable PDF (pdf-lib + fontkit + /ActualText), EPUB 3, DOCX, TXT
+   ========================================================================= */
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const state = {
+  file: null,
+  pdfBytes: null,
+  totalPages: 0,
+  baseName: 'Document',
+  pages: [],       // Array of { pageNumber, width, height, rows: [ { y, segments: [{x, fontSize, bold, text}], isHeader } ], editedText: null }
+  bookmarks: [],   // Array of { title, pageIndex }
+  currentViewIdx: 0,
+  stopRequested: false,
+  cachedBnRegularBytes: null,
+  cachedBnBoldBytes: null
+};
+
+// -------------------- UI WIRING --------------------
+const el = id => document.getElementById(id);
+
+el('themeBtn').addEventListener('click', () => {
+  const html = document.documentElement;
+  html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+});
+
+el('browseBtn').addEventListener('click', e => { e.stopPropagation(); el('fileInput').click(); });
+el('changeFileBtn').addEventListener('click', () => el('fileInput').click());
+el('dropzone').addEventListener('click', () => el('fileInput').click());
+
+el('dropzone').addEventListener('dragover', e => { e.preventDefault(); el('dropzone').classList.add('dragover'); });
+el('dropzone').addEventListener('dragleave', () => el('dropzone').classList.remove('dragover'));
+el('dropzone').addEventListener('drop', e => {
+  e.preventDefault();
+  el('dropzone').classList.remove('dragover');
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) handleSelectedFile(e.dataTransfer.files[0]);
+});
+
+el('fileInput').addEventListener('change', e => {
+  if (e.target.files && e.target.files[0]) handleSelectedFile(e.target.files[0]);
+});
+
+async function handleSelectedFile(file) {
+  try {
+    state.file = file;
+    state.baseName = file.name.replace(/\.pdf$/i, '');
+    el('fileNameLabel').textContent = file.name;
+    el('fileMetaLabel').textContent = `${(file.size / (1024 * 1024)).toFixed(2)} MB • Inspecting pages...`;
+    el('fileBar').classList.add('active');
+    el('convertBtn').disabled = true;
+
+    const buf = await file.arrayBuffer();
+    state.pdfBytes = new Uint8Array(buf);
+
+    // Quick page count check via pdf.js
+    const loadingTask = pdfjsLib.getDocument({ data: state.pdfBytes.slice() });
+    const doc = await loadingTask.promise;
+    state.totalPages = doc.numPages;
+    await doc.destroy();
+
+    el('fileMetaLabel').textContent = `${(file.size / (1024 * 1024)).toFixed(2)} MB • ${state.totalPages} pages • Ready`;
+    el('convertBtn').disabled = false;
+  } catch (err) {
+    alert('Could not read PDF file: ' + err.message);
+  }
+}
+
+el('stopBtn').addEventListener('click', () => {
+  state.stopRequested = true;
+  el('statusLog').textContent = 'Stopping after current page...';
+});
+
+// -------------------- OCR & TYPO DICTIONARIES --------------------
+const EXACT_TYPO_MAP = {
+  'YOREWORD': 'FOREWORD', 'eoreward': 'Foreword', 'Rides': 'Rules',
+  'Part-1': 'Part-I', 'CHAPTER 1': 'CHAPTER I', 'Cflapter': 'Chapter',
+  'lamer': 'Chapter', 'Pestles': 'Posting', 'Correedone': 'Corrections',
+  'Applicadons': 'Applications', 'aassificadon': 'Classification',
+  'reckonnimg': 'reckoning', 'Supspensions': 'Suspensions',
+  'Redrin8': 'Retiring', 'Conweercial': 'Commercial',
+  'Supplossoi': 'Supplement', 'PAGIts': 'PAGES', 'PAGXL': 'PAGES',
+  'Chnitted': 'Omitted', 'jAppeltdix': '[Appendix', 'Appeltdix': 'Appendix',
+  'ERUL13': '[RULE', 'Go7ernment': 'Government', 'Govrnment': 'Government',
+  'Goveinment': 'Government', 'Goverment': 'Government', 'Govetnment': 'Government',
+  'veneral': 'General', 'Notel': 'Note 1', 'X11': 'XII', 'R111': 'RIII',
+  'p35iti0n': 'position', 'exc3ptional': 'exceptional', 'Honout': 'Honour',
+  'Secretory': 'Secretary'
+};
+
+const CASE_INSENSITIVE_TYPOS = {
+  'tne': 'the', 'tbe': 'the', 'ihe': 'the', 'tht': 'the', 'tae': 'the',
+  'tlie': 'the', 'tho': 'the', 'thc': 'the', 'permanet': 'permanent',
+  'wnich': 'which', 'waich': 'which', 'whic': 'which', 'whicb': 'which',
+  'ofthe': 'of the', 'witn': 'with', 'tnat': 'that', 'snould': 'should',
+  'particuar': 'particular', 'seivice': 'service', 'servico': 'service',
+  'sevice': 'service', 'sanctined': 'sanctioned', 'indentical': 'identical',
+  'againit': 'against', 'icquired': 'required', 'perscn': 'person',
+  'cosultation': 'consultation', 'examinatidn': 'examination',
+  'exanination': 'examination', 'examinatiot': 'examination',
+  'pciod': 'period', 'caee': 'case', 'permired': 'permitted',
+  'teport': 'report', 'iirerval': 'interval'
+};
+
+function cleanTextLine(str, isHeader, cleanTypos) {
+  let s = str;
+  if (!cleanTypos) return s.replace(/ {2,}/g, ' ').trim();
+
+  if (s.includes('\u2022 \u2022') || s.endsWith(' \u2022') || s.startsWith('\u2022 ')) {
+    s = s.replace(/\u2022/g, '.');
+  }
+  s = s.replace(/\u201E/g, '"');
+  if (isHeader) {
+    s = s.replace(/(CHAP\.\s*[IVXLCDM0-9]+)\[/g, '$1]');
+  }
+  s = s.replace(/\bcourse ot\b/gi, 'course of')
+       .replace(/\bplace ot\b/gi, 'place of')
+       .replace(/\brate ot\b/gi, 'rate of')
+       .replace(/\bdate ot\b/gi, 'date of')
+       .replace(/\bov training\b/g, 'or training')
+       .replace(/\bcollege oz school\b/g, 'college or school')
+       .replace(/\bArabic cm Persian\b/g, 'Arabic or Persian')
+       .replace(/\bake charge oi\b/g, 'take charge of')
+       .replace(/\bper cant\./g, 'per cent.')
+       .replace(/\btlei r\b/g, 'their')
+       .replace(/\bdeen ed\b/g, 'deemed');
+
+  s = s.replace(/(?<![A-Za-z0-9])([A-Za-z0-9\-\[]+)(?![A-Za-z0-9])/g, (m, tok) => {
+    if (Object.prototype.hasOwnProperty.call(EXACT_TYPO_MAP, tok)) return EXACT_TYPO_MAP[tok];
+    const low = tok.toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(CASE_INSENSITIVE_TYPOS, low)) {
+      const rep = CASE_INSENSITIVE_TYPOS[low];
+      if (tok === tok.toUpperCase() && tok.length > 1) return rep.toUpperCase();
+      if (tok[0] === tok[0].toUpperCase()) return rep[0].toUpperCase() + rep.slice(1);
+      return rep;
+    }
+    return tok;
+  });
+
+  return s.replace(/ {2,}/g, ' ').trim();
+}
+
+// -------------------- COMPLETE BIJOY (SUTONNYMJ) & BANGLA GSUB ENGINE --------------------
+const BIJOY_CHAR_MAP = {
+  '0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯',
+  'A':'অ','B':'ই','C':'ঈ','D':'উ','E':'ঊ','F':'ঋ','G':'এ','H':'ঐ','I':'ও','J':'ঔ',
+  'K':'ক','L':'খ','M':'গ','N':'ঘ','O':'ঙ','P':'চ','Q':'ছ','R':'জ','S':'ঝ','T':'ঞ',
+  'U':'ট','V':'ঠ','W':'ড','X':'ঢ','Y':'ণ','Z':'ত','_':'থ','`':'দ','a':'ধ','b':'ন',
+  'c':'প','d':'ফ','e':'ব','f':'ভ','g':'ম','h':'য','i':'র','j':'ল','k':'শ','l':'ষ',
+  'm':'স','n':'হ','o':'ড়','p':'ঢ়','q':'য়','r':'ৎ','s':'ং','t':'ঃ','u':'ঁ',
+  'v':'া','w':'ি','x':'ী','y':'ু','z':'ু','\u201C':'ু','\u2013':'ু',
+  '~':'ূ','\u201D':'ূ','\u2014':'ূ',
+  '\u201E':'ৃ','\u2026':'ৃ','\u2020':'ে','\u2021':'ে','\u02C6':'ৈ','\u2030':'ৈ','\u0160':'ৌ',
+  '&':'্','|':'।','$':'৳',
+  '\u00A1':'্ব','\u00A2':'্ভ','\u00A3':'্র','\u00A4':'ম্','\u00A5':'্ম','\u00A6':'্ব',
+  '\u00A7':'্ম','\u00A8':'্য','\u00A9':'\uE001','\u00AA':'্র','\u00AB':'্র','\u00AC':'্ল',
+  '\u00AE':'ষ্ণ','\u00AF':'স্','\u00B0':'ক্ক','\u00B1':'ক্ট','\u00B3':'ক্ত','\u00B4':'ক্ন',
+  '\u00B5':'ক্র','\u00B6':'ক্ষ','\u00B7':'ক্স','\u00B8':'গু','\u00B9':'গ্ধ','\u00BA':'গ্ন',
+  '\u00BB':'গ্ম','\u00BC':'ঙ্ক','\u00BD':'ঙ্গ','\u00BE':'জ্জ','\u00BF':'্ত্র','\u00C0':'জ্ঝ',
+  '\u00C1':'জ্ঞ','\u00C2':'ঞ্চ','\u00C3':'ঞ্জ','\u00C4':'ঞ্ছ','\u00C5':'ঞ্ঝ','\u00C6':'ট্ট',
+  '\u00C7':'ড্ড','\u00C8':'ণ্ট','\u00C9':'ণ্ঠ','\u00CA':'ণ্ড','\u00CB':'ত্ত','\u00CC':'ত্থ',
+  '\u00CD':'ত্ন','\u00CE':'ত্র','\u00CF':'দ্দ','\u00D0':'দ্ধ','\u00D1':'দ্ব','\u00D2':'দ্ভ',
+  '\u00D3':'দ্ম','\u00D4':'প্ত','\u00D5':'্ব','\u00D6':'্র','\u00D7':'দ্ধ','\u00D8':'দ্ব',
+  '\u00D9':'দ্ম','\u00DA':'ন্ঠ','\u00DB':'ন্ড','\u00DC':'ন্ধ','\u00DD':'ন্স','\u00DE':'প্ট',
+  '\u00DF':'প্ত','\u00E0':'প্প','\u00E1':'প্স','\u00E2':'ব্জ','\u00E3':'ব্দ','\u00E4':'ব্ধ',
+  '\u00E5':'ভ্র','\u00E6':'রু','\u00E7':'রূ','\u00E8':'্ন','\u00E9':'ল্ক','\u00EA':'ল্গ',
+  '\u00EB':'ল্ট','\u00EC':'ল্ড','\u00ED':'ল্প','\u00EE':'ল্ফ','\u00EF':'শু','\u00F0':'শ্চ',
+  '\u00F1':'শ্ন','\u00F2':'শ্ব','\u00F3':'ষ্ট','\u00F4':'ষ্ঠ','\u00F5':'ষ্ণ','\u00F6':'ষ্প',
+  '\u00F7':'স্ট','\u00F8':'স্ন','\u00F9':'স্ফ','\u00FA':'প','\u00FB':'হু','\u00FC':'হৃ',
+  '\u00FD':'হ্ন','\u00FE':'হ্ম'
+};
+
+function isBnConsonant(ch) {
+  const c = ch.charCodeAt(0);
+  return (c >= 0x0995 && c <= 0x09B9) || (c >= 0x09DC && c <= 0x09DF) || c === 0x09CE;
+}
+
+function isPreVowel(ch) {
+  return ch === '\u09BF' || ch === '\u09C7' || ch === '\u09C8';
+}
+
+function reorderVisualBangla(input) {
+  // Fix ம+ূ ambiguity in Bijoy when \u00A4 follows consonant vs stands as half-ma
+  let s = input.replace(/([ক-হড়-য়])\u09AE\u09CD(?![ক-হড়-য়])/g, '$1\u09C2');
+  s = s.replace(/\u0985\u09BE/g, '\u0986'); // অ + া -> আ
+
+  const chars = Array.from(s);
+  let i = 0;
+  while (i < chars.length) {
+    if (isPreVowel(chars[i]) && i + 1 < chars.length && isBnConsonant(chars[i + 1])) {
+      const pv = chars[i];
+      chars.splice(i, 1);
+      let p = i + 1;
+      while (p + 1 < chars.length && chars[p] === '\u09CD' && isBnConsonant(chars[p + 1])) {
+        p += 2;
+      }
+      chars.splice(p, 0, pv);
+      i = p + 1;
+    } else {
+      i++;
+    }
+  }
+
+  // Move Reph marker (\uE001) before preceding consonant cluster
+  for (let j = 0; j < chars.length; j++) {
+    if (chars[j] === '\uE001') {
+      chars.splice(j, 1);
+      let k = j - 1;
+      while (k >= 0 && chars[k].charCodeAt(0) >= 0x09BC && chars[k].charCodeAt(0) <= 0x09D7) k--;
+      if (k >= 0 && isBnConsonant(chars[k])) {
+        while (k - 2 >= 0 && chars[k - 1] === '\u09CD' && isBnConsonant(chars[k - 2])) k -= 2;
+        chars.splice(k, 0, '\u09B0', '\u09CD');
+        j++;
+      } else {
+        chars.splice(j, 0, '\u09B0', '\u09CD');
+        j++;
+      }
+    }
+  }
+
+  let res = chars.join('');
+  res = res.replace(/\u0336/g, '\u2014')
+           .replace(/\u09C7\u09BE/g, '\u09CB')
+           .replace(/\u09BE\u09C7/g, '\u09CB')
+           .replace(/\u09C7\u09D7/g, '\u09CC')
+           .replace(/\u09D7\u09C7/g, '\u09CC');
+  return res;
+}
+
+function convertBijoyToVisual(str) {
+  let out = '';
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    out += Object.prototype.hasOwnProperty.call(BIJOY_CHAR_MAP, ch) ? BIJOY_CHAR_MAP[ch] : ch;
+  }
+  return out;
+}
+
+// TrueType Binary Helpers
+function u16(b, o) { return (b[o] << 8) | b[o + 1]; }
+function s16(b, o) { const v = (b[o] << 8) | b[o + 1]; return v >= 0x8000 ? v - 0x10000 : v; }
+function u32(b, o) { return ((b[o] << 24) >>> 0) + ((b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]); }
+
+function findTtfTable(ttf, tag) {
+  if (!ttf || ttf.length < 12) return -1;
+  const numTables = u16(ttf, 4);
+  for (let i = 0; i < numTables; i++) {
+    const p = 12 + i * 16;
+    if (p + 16 > ttf.length) break;
+    const t = String.fromCharCode(ttf[p], ttf[p+1], ttf[p+2], ttf[p+3]);
+    if (t === tag) return u32(ttf, p + 8);
+  }
+  return -1;
+}
+
+function readTtfFontName(ttf) {
+  const off = findTtfTable(ttf, 'name');
+  if (off < 0 || off + 6 > ttf.length) return '';
+  const count = u16(ttf, off + 2);
+  const strOff = off + u16(ttf, off + 4);
+  const names = [];
+  for (let i = 0; i < count; i++) {
+    const rp = off + 6 + i * 12;
+    if (rp + 12 > ttf.length) break;
+    const plat = u16(ttf, rp);
+    const nameId = u16(ttf, rp + 6);
+    const len = u16(ttf, rp + 8);
+    const rel = u16(ttf, rp + 10);
+    if ((nameId === 1 || nameId === 4 || nameId === 6) && strOff + rel + len <= ttf.length) {
+      let s = '';
+      if (plat === 3 || plat === 0) {
+        for (let k = 0; k < len; k += 2) s += String.fromCharCode(u16(ttf, strOff + rel + k));
+      } else {
+        for (let k = 0; k < len; k++) s += String.fromCharCode(ttf[strOff + rel + k]);
+      }
+      names.push(s);
+    }
+  }
+  return names.join(' ');
+}
+
+function invertTtfCmap(ttf) {
+  const map = new Map();
+  const off = findTtfTable(ttf, 'cmap');
+  if (off < 0) return map;
+  const numSub = u16(ttf, off + 2);
+  for (let s = 0; s < numSub; s++) {
+    const subOff = off + u32(ttf, off + 4 + s * 8 + 4);
+    if (subOff + 14 > ttf.length) continue;
+    const fmt = u16(ttf, subOff);
+    if (fmt === 4) {
+      const segCount = u16(ttf, subOff + 6) >> 1;
+      const endOff = subOff + 14;
+      const startOff = endOff + segCount * 2 + 2;
+      const deltaOff = startOff + segCount * 2;
+      const rangeOff = deltaOff + segCount * 2;
+      for (let seg = 0; seg < segCount; seg++) {
+        const endC = u16(ttf, endOff + seg * 2);
+        const startC = u16(ttf, startOff + seg * 2);
+        const delta = s16(ttf, deltaOff + seg * 2);
+        const rOff = u16(ttf, rangeOff + seg * 2);
+        if (startC === 0xFFFF) break;
+        for (let c = startC; c <= endC; c++) {
+          let gid = 0;
+          if (rOff === 0) gid = (c + delta) & 0xFFFF;
+          else {
+            const gAddr = rangeOff + seg * 2 + rOff + (c - startC) * 2;
+            if (gAddr + 2 <= ttf.length) {
+              const rawG = u16(ttf, gAddr);
+              gid = rawG === 0 ? 0 : ((rawG + delta) & 0xFFFF);
+            }
+          }
+          if (gid !== 0 && !map.has(gid)) map.set(gid, c);
+        }
+      }
+    }
+  }
+  return map;
+}
+
+function readGsubCoverage(b, off) {
+  const res = [];
+  const fmt = u16(b, off);
+  if (fmt === 1) {
+    const cnt = u16(b, off + 2);
+    for (let i = 0; i < cnt; i++) res.push(u16(b, off + 4 + i * 2));
+  } else if (fmt === 2) {
+    const rCnt = u16(b, off + 2);
+    for (let i = 0; i < rCnt; i++) {
+      const s = u16(b, off + 4 + i * 6);
+      const e = u16(b, off + 6 + i * 6);
+      for (let g = s; g <= e; g++) res.push(g);
+    }
+  }
+  return res;
+}
+
+function buildOpenTypeBanglaGidMap(ttf) {
+  const cmap = invertTtfCmap(ttf);
+  const gidMap = new Map();
+  for (const [gid, cp] of cmap.entries()) {
+    gidMap.set(gid, String.fromCodePoint(cp));
+  }
+
+  const gsubOff = findTtfTable(ttf, 'GSUB');
+  if (gsubOff < 0) return gidMap;
+
+  const featListOff = gsubOff + u16(ttf, gsubOff + 6);
+  const lookupListOff = gsubOff + u16(ttf, gsubOff + 8);
+  const lookupFeats = new Map();
+  const featCnt = u16(ttf, featListOff);
+
+  for (let f = 0; f < featCnt; f++) {
+    const rp = featListOff + 2 + f * 6;
+    const tag = String.fromCharCode(ttf[rp], ttf[rp+1], ttf[rp+2], ttf[rp+3]);
+    const fOff = featListOff + u16(ttf, rp + 4);
+    const lCnt = u16(ttf, fOff + 2);
+    for (let i = 0; i < lCnt; i++) {
+      const lIdx = u16(ttf, fOff + 4 + i * 2);
+      if (!lookupFeats.has(lIdx)) lookupFeats.set(lIdx, new Set());
+      lookupFeats.get(lIdx).add(tag);
+    }
+  }
+
+  const lookupCnt = u16(ttf, lookupListOff);
+  for (let pass = 0; pass < 6; pass++) {
+    let added = 0;
+    for (let l = 0; l < lookupCnt; l++) {
+      const feats = lookupFeats.get(l) || new Set();
+      const isRphf = feats.has('rphf');
+      const isBlwf = feats.has('blwf');
+      const isPstf = feats.has('pstf');
+      const isInit = feats.has('init');
+
+      const lOff = lookupListOff + u16(ttf, lookupListOff + 2 + l * 2);
+      const lType = u16(ttf, lOff);
+      const subCnt = u16(ttf, lOff + 4);
+
+      for (let s = 0; s < subCnt; s++) {
+        let subOff = lOff + u16(ttf, lOff + 6 + s * 2);
+        let actualType = lType;
+        if (actualType === 7) {
+          actualType = u16(ttf, subOff + 2);
+          subOff = subOff + u32(ttf, subOff + 4);
+        }
+        if (actualType === 1) {
+          const fmt = u16(ttf, subOff);
+          const cov = readGsubCoverage(ttf, subOff + u16(ttf, subOff + 2));
+          if (fmt === 1) {
+            const delta = s16(ttf, subOff + 4);
+            for (const inG of cov) {
+              const outG = (inG + delta) & 0xFFFF;
+              if (gidMap.has(inG) && !gidMap.has(outG)) {
+                gidMap.set(outG, gidMap.get(inG)); added++;
+              }
+            }
+          } else if (fmt === 2) {
+            const cnt = u16(ttf, subOff + 4);
+            for (let i = 0; i < cnt && i < cov.length; i++) {
+              const inG = cov[i];
+              const outG = u16(ttf, subOff + 6 + i * 2);
+              if (gidMap.has(inG) && !gidMap.has(outG)) {
+                gidMap.set(outG, gidMap.get(inG)); added++;
+              }
+            }
+          }
+        } else if (actualType === 4) {
+          const fmt = u16(ttf, subOff);
+          if (fmt === 1) {
+            const cov = readGsubCoverage(ttf, subOff + u16(ttf, subOff + 2));
+            const setCnt = u16(ttf, subOff + 4);
+            for (let i = 0; i < setCnt && i < cov.length; i++) {
+              const firstG = cov[i];
+              if (!gidMap.has(firstG)) continue;
+              const setOff = subOff + u16(ttf, subOff + 6 + i * 2);
+              const ligCnt = u16(ttf, setOff);
+              for (let j = 0; j < ligCnt; j++) {
+                const ligOff = setOff + u16(ttf, setOff + 2 + j * 2);
+                const ligG = u16(ttf, ligOff);
+                const compCnt = u16(ttf, ligOff + 2);
+                let seq = gidMap.get(firstG);
+                let ok = true;
+                for (let k = 0; k < compCnt - 1; k++) {
+                  const cg = u16(ttf, ligOff + 4 + k * 2);
+                  if (!gidMap.has(cg)) { ok = false; break; }
+                  seq += gidMap.get(cg);
+                }
+                if (ok && !gidMap.has(ligG)) {
+                  if (isRphf && seq === '\u09B0\u09CD') seq = '\uE001';
+                  else if ((isBlwf || isPstf) && seq.length === 2 && seq[1] === '\u09CD') {
+                    seq = '\u09CD' + seq[0];
+                  }
+                  gidMap.set(ligG, seq);
+                  added++;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    if (added === 0) break;
+  }
+  return gidMap;
+}
+
+function readTtfAdvanceWidths(ttf) {
+  const headOff = findTtfTable(ttf, 'head');
+  const hheaOff = findTtfTable(ttf, 'hhea');
+  const hmtxOff = findTtfTable(ttf, 'hmtx');
+  if (headOff < 0 || hheaOff < 0 || hmtxOff < 0) return null;
+  const unitsPerEm = u16(ttf, headOff + 18) || 1000;
+  const numHMetrics = u16(ttf, hheaOff + 34) || 1;
+  return {
+    unitsPerEm,
+    getEmWidth(gid) {
+      const idx = gid < numHMetrics ? gid : (numHMetrics - 1);
+      const pos = hmtxOff + idx * 4;
+      if (pos + 2 > ttf.length) return 0.5;
+      return u16(ttf, pos) / unitsPerEm;
+    }
+  };
+}
+
+// Inspect PDF raw binary for Bijoy / Broken OpenType Bangla fonts
+function analyzeBinaryPdfFonts(pdfBytes) {
+  const lat1 = new TextDecoder('iso-8859-1');
+  const rawStr = lat1.decode(pdfBytes);
+
+  const objs = new Map();
+  const objRx = /(?:^|\r|\n)(\d+)\s+0\s+obj\s*([\s\S]*?)\s*endobj/g;
+  let m;
+  while ((m = objRx.exec(rawStr)) !== null) {
+    const id = parseInt(m[1], 10);
+    const body = m[2];
+    const sIdx = body.indexOf('stream');
+    const dict = sIdx >= 0 ? body.slice(0, sIdx) : body;
+    let streamPos = -1;
+    if (sIdx >= 0) {
+      let sp = m.index + m[0].indexOf('stream') + 6;
+      if (pdfBytes[sp] === 13 && pdfBytes[sp + 1] === 10) sp += 2;
+      else if (pdfBytes[sp] === 10 || pdfBytes[sp] === 13) sp += 1;
+      streamPos = sp;
+    }
+    objs.set(id, { dict, streamPos });
+  }
+
+  function getStreamBytes(id) {
+    const info = objs.get(id);
+    if (!info || info.streamPos < 0) return null;
+    const lenM = info.dict.match(/\/Length\s+(\d+)\s+0\s+R/)
+      ? null
+      : info.dict.match(/\/Length\s+(\d+)/);
+    let len = 0;
+    if (lenM) {
+      len = parseInt(lenM[1], 10);
+    } else {
+      const refM = info.dict.match(/\/Length\s+(\d+)\s+0\s+R/);
+      if (refM && objs.has(parseInt(refM[1], 10))) {
+        len = parseInt(objs.get(parseInt(refM[1], 10)).dict.trim(), 10) || 0;
+      }
+    }
+    if (len <= 0) return null;
+    const slice = pdfBytes.subarray(info.streamPos, info.streamPos + len);
+    if (info.dict.includes('FlateDecode')) {
+      try { return pako.inflate(slice); } catch {
+        try { return pako.inflateRaw(slice.subarray(2)); } catch { return null; }
+      }
+    }
+    return slice;
+  }
+
+  function parseToUnicodeMap(cmapStr) {
+    const map = new Map();
+    const bfCharRx = /beginbfchar([\s\S]*?)endbfchar/g;
+    let bm;
+    while ((bm = bfCharRx.exec(cmapStr)) !== null) {
+      const pairRx = /<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g;
+      let pm;
+      while ((pm = pairRx.exec(bm[1])) !== null) {
+        const src = parseInt(pm[1], 16);
+        const hex = pm[2];
+        let str = '';
+        for (let i = 0; i < hex.length; i += 4) {
+          str += String.fromCharCode(parseInt(hex.slice(i, i + 4), 16));
+        }
+        map.set(src, str);
+      }
+    }
+    return map;
+  }
+
+  // Inspect Font objects
+  const fonts = new Map(); // fontObjId -> { kind, gidMap/cmapInv, metrics, isBold }
+  let hasSpecialBangla = false;
+
+  for (const [id, info] of objs.entries()) {
+    if (!/\/Type\s*\/Font\b/.test(info.dict)) continue;
+    if (info.dict.includes('/Subtype /CIDFontType2') && !info.dict.includes('/DescendantFonts')) continue;
+
+    let fullFontDict = info.dict;
+    const descRef = info.dict.match(/\/DescendantFonts\s*\[\s*(\d+)\s+0\s+R/);
+    if (descRef && objs.has(parseInt(descRef[1], 10))) {
+      fullFontDict += ' ' + objs.get(parseInt(descRef[1], 10)).dict;
+    }
+    const fdRef = fullFontDict.match(/\/FontDescriptor\s+(\d+)\s+0\s+R/);
+    if (fdRef && objs.has(parseInt(fdRef[1], 10))) {
+      fullFontDict += ' ' + objs.get(parseInt(fdRef[1], 10)).dict;
+    }
+
+    const ff2M = fullFontDict.match(/\/FontFile2\s+(\d+)\s+0\s+R/);
+    const tuM = info.dict.match(/\/ToUnicode\s+(\d+)\s+0\s+R/);
+    let tuMap = new Map();
+    if (tuM) {
+      const tuBytes = getStreamBytes(parseInt(tuM[1], 10));
+      if (tuBytes) tuMap = parseToUnicodeMap(lat1.decode(tuBytes));
+    }
+
+    if (ff2M) {
+      const ttf = getStreamBytes(parseInt(ff2M[1], 10));
+      if (ttf) {
+        const ttfName = readTtfFontName(ttf);
+        const isBold = /Bold/i.test(ttfName);
+        const metrics = readTtfAdvanceWidths(ttf);
+        if (/SutonnyMJ/i.test(ttfName) && !/SutonnyOMJ/i.test(ttfName)) {
+          hasSpecialBangla = true;
+          const cmapInv = invertTtfCmap(ttf);
+          fonts.set(id, { kind: 'bijoy', cmapInv, tuMap, metrics, isBold });
+          continue;
+        }
+        if (/Nikosh|Solaiman|Kalpurush|Siyam|Vrinda|Bangla|BenSen|Adorsho|Mitra|Mukti/i.test(ttfName)) {
+          hasSpecialBangla = true;
+          const gidMap = buildOpenTypeBanglaGidMap(ttf);
+          for (const [k, v] of tuMap.entries()) if (!gidMap.has(k)) gidMap.set(k, v);
+          fonts.set(id, { kind: 'bangla-gsub', gidMap, metrics, isBold });
+          continue;
+        }
+        const cmapInv = invertTtfCmap(ttf);
+        const gidMap = new Map();
+        for (const [g, cp] of cmapInv.entries()) gidMap.set(g, String.fromCodePoint(cp));
+        for (const [g, s] of tuMap.entries()) gidMap.set(g, s);
+        fonts.set(id, { kind: 'unicode', gidMap, metrics, isBold });
+        continue;
+      }
+    }
+    fonts.set(id, { kind: 'unicode', gidMap: tuMap, metrics: null, isBold: /Bold/i.test(fullFontDict) });
+  }
+
+  // Collect ordered page IDs recursively from /Catalog -> /Pages
+  const pageIds = [];
+  function walkPages(nodeId) {
+    const node = objs.get(nodeId);
+    if (!node) return;
+    if (/\/Type\s*\/Page\b/.test(node.dict) && !/\/Type\s*\/Pages\b/.test(node.dict)) {
+      pageIds.push(nodeId);
+      return;
+    }
+    const kidsM = node.dict.match(/\/Kids\s*\[([^\]]+)\]/);
+    if (kidsM) {
+      const rRx = /(\d+)\s+0\s+R/g;
+      let rm;
+      while ((rm = rRx.exec(kidsM[1])) !== null) walkPages(parseInt(rm[1], 10));
+    }
+  }
+
+  for (const [id, info] of objs.entries()) {
+    if (/\/Type\s*\/Catalog\b/.test(info.dict)) {
+      const pm = info.dict.match(/\/Pages\s+(\d+)\s+0\s+R/);
+      if (pm) walkPages(parseInt(pm[1], 10));
+      break;
+    }
+  }
+
+  return { hasSpecialBangla, objs, fonts, pageIds, getStreamBytes, lat1 };
+}
+
+function extractPageViaBinaryBangla(binCtx, pageIndex) {
+  const pageId = binCtx.pageIds[pageIndex];
+  const pInfo = binCtx.objs.get(pageId);
+  if (!pInfo) return null;
+
+  let resDict = pInfo.dict;
+  const resRef = pInfo.dict.match(/\/Resources\s+(\d+)\s+0\s+R/);
+  if (resRef && binCtx.objs.has(parseInt(resRef[1], 10))) {
+    resDict = binCtx.objs.get(parseInt(resRef[1], 10)).dict;
+  }
+
+  // Map local /Fx -> Font object
+  const localFonts = new Map();
+  const fRx = /\/(F\d+)\s+(\d+)\s+0\s+R/g;
+  let fm;
+  while ((fm = fRx.exec(resDict)) !== null) {
+    localFonts.set(fm[1], binCtx.fonts.get(parseInt(fm[2], 10)));
+  }
+
+  // MediaBox
+  let pageW = 595.28, pageH = 841.89;
+  const mbM = pInfo.dict.match(/\/MediaBox\s*\[\s*([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s*\]/);
+  if (mbM) {
+    pageW = parseFloat(mbM[3]) - parseFloat(mbM[1]);
+    pageH = parseFloat(mbM[4]) - parseFloat(mbM[2]);
+  }
+
+  // Read Content stream(s)
+  const contIds = [];
+  const cArrM = pInfo.dict.match(/\/Contents\s*\[([^\]]+)\]/);
+  if (cArrM) {
+    const rRx = /(\d+)\s+0\s+R/g;
+    let rm;
+    while ((rm = rRx.exec(cArrM[1])) !== null) contIds.push(parseInt(rm[1], 10));
+  } else {
+    const cSingle = pInfo.dict.match(/\/Contents\s+(\d+)\s+0\s+R/);
+    if (cSingle) contIds.push(parseInt(cSingle[1], 10));
+  }
+
+  let stm = '';
+  for (const cid of contIds) {
+    const b = binCtx.getStreamBytes(cid);
+    if (b) stm += binCtx.lat1.decode(b) + '\n';
+  }
+
+  // Parse CTM (e.g. 0.75 0 0 -0.75 0 792 cm), Tr, Tf, Tm, TJ/Tj
+  let ctmA = 1, ctmD = 1, ctmE = 0, ctmF = 0;
+  const cmM = stm.match(/([-\d.]+)\s+0(?:\.0+)?\s+0(?:\.0+)?\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+cm/);
+  if (cmM) {
+    ctmA = parseFloat(cmM[1]);
+    ctmD = parseFloat(cmM[2]);
+    ctmE = parseFloat(cmM[3]);
+    ctmF = parseFloat(cmM[4]);
+  }
+
+  const tokens = [];
+  let curFont = null;
+  let curSize = 12;
+  let curTr = 0;
+  let curX = 50, curY = pageH - 50;
+
+  const opRx = /([0-9]+)\s+Tr|\/(F\d+)\s+([-\d.]+)\s+Tf|([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+Tm|\[([^\]]+)\]\s*TJ|<([0-9A-Fa-f]+)>\s*Tj/g;
+  let om;
+  while ((om = opRx.exec(stm)) !== null) {
+    if (om[1] !== undefined) {
+      curTr = parseInt(om[1], 10);
+    } else if (om[2] !== undefined) {
+      curFont = localFonts.get(om[2]) || null;
+      curSize = parseFloat(om[3]) * Math.abs(ctmA);
+    } else if (om[4] !== undefined) {
+      const tx = parseFloat(om[8]);
+      const ty = parseFloat(om[9]);
+      curX = tx * ctmA + ctmE;
+      curY = ty * ctmD + ctmF;
+    } else if ((om[10] !== undefined || om[11] !== undefined) && curFont) {
+      const rawContent = om[10] !== undefined ? om[10] : `<${om[11]}>`;
+      let xCursor = curX;
+      let runStr = '';
+      let runStartX = curX;
+
+      const flushRun = () => {
+        if (!runStr) return;
+        const decoded = curFont.kind === 'bijoy' ? convertBijoyToVisual(runStr) : runStr;
+        const hasTrailSpace = /\s$/.test(decoded);
+        const hasLeadSpace = /^\s/.test(decoded);
+        const trimmed = decoded.trim();
+        if (trimmed.length === 0) {
+          // Pure whitespace run (e.g. standalone [<0003>] TJ space block in Print-to-PDF)
+          if (decoded.length > 0 && tokens.length > 0 && Math.abs(tokens[tokens.length - 1].y - curY) < 4.0) {
+            tokens[tokens.length - 1].trailingSpace = true;
+          }
+        } else if (trimmed === '\uE001' && tokens.length > 0 && Math.abs(tokens[tokens.length - 1].y - curY) < 4.0) {
+          // Attach zero-width GPOS Reph mark directly to the preceding consonant run in stream order!
+          tokens[tokens.length - 1].text += '\uE001';
+        } else {
+          tokens.push({
+            x: runStartX,
+            y: curY,
+            width: Math.max(1, xCursor - runStartX),
+            fontSize: curSize,
+            bold: curFont.isBold || curTr === 2,
+            text: trimmed,
+            leadingSpace: hasLeadSpace,
+            trailingSpace: hasTrailSpace,
+            isBanglaVisual: curFont.kind === 'bangla-gsub' || curFont.kind === 'bijoy'
+          });
+        }
+        runStr = '';
+      };
+
+      const itemRx = /<([0-9A-Fa-f]{4})>|([-\d.]+)/g;
+      let im;
+      while ((im = itemRx.exec(rawContent)) !== null) {
+        if (im[1] !== undefined) {
+          const gid = parseInt(im[1], 16);
+          let piece = '';
+          if (curFont.kind === 'bijoy') {
+            if (curFont.cmapInv.has(gid)) piece = String.fromCharCode(curFont.cmapInv.get(gid));
+            else if (curFont.tuMap.has(gid)) piece = curFont.tuMap.get(gid);
+          } else {
+            piece = curFont.gidMap.get(gid) || '';
+          }
+          if (runStr === '') runStartX = xCursor;
+          runStr += piece;
+          const emW = curFont.metrics ? curFont.metrics.getEmWidth(gid) : 0.48;
+          xCursor += curSize * emW;
+        } else if (im[2] !== undefined) {
+          const kern = parseFloat(im[2]);
+          const shiftPt = (-kern / 1000.0) * curSize;
+          if (shiftPt > curSize * 1.45) {
+            flushRun();
+            xCursor += shiftPt;
+            runStartX = xCursor;
+          } else if (shiftPt > curSize * 0.22) {
+            runStr += ' ';
+            xCursor += shiftPt;
+          } else {
+            xCursor += shiftPt;
+          }
+        }
+      }
+      flushRun();
+    }
+  }
+
+  return { width: pageW, height: pageH, tokens, needsBanglaLineReorder: true };
+}
+
+// -------------------- LAYOUT RECONSTRUCTOR (ROWS, COLUMNS, BOOKMARKS) --------------------
+function reconstructPageRows(rawPage, pageNumber, opts) {
+  const { width: pageW, height: pageH, tokens } = rawPage;
+  if (!tokens || tokens.length === 0) return { pageNumber, width: pageW, height: pageH, rows: [], editedText: null };
+
+  // 1. Estimate skew slope if deskew enabled
+  let slope = 0;
+  if (opts.deskew && tokens.length >= 8) {
+    const slopes = [];
+    for (let i = 1; i < tokens.length; i++) {
+      const dx = tokens[i].x - tokens[i - 1].x;
+      const dy = tokens[i].y - tokens[i - 1].y;
+      if (dx > 8 && dx < 120 && Math.abs(dy) < 3.2) slopes.push(dy / dx);
+    }
+    if (slopes.length >= 5) {
+      slopes.sort((a, b) => a - b);
+      slope = Math.max(-0.04, Math.min(0.04, slopes[slopes.length >> 1]));
+    }
+  }
+
+  // Cover page stamp/barcode noise filter if enabled
+  let filteredTokens = tokens;
+  if (pageNumber === 1 && opts.cleanCover) {
+    filteredTokens = tokens.filter(t => !/OCAG|Library|A03441|Banglados|:mow/i.test(t.text));
+  }
+
+  // 2. Group into horizontal rows
+  const items = filteredTokens.map(t => ({
+    tok: t,
+    dy: t.y - slope * (t.x - pageW * 0.5)
+  })).sort((a, b) => b.dy - a.dy || a.tok.x - b.tok.x);
+
+  const rawRows = [];
+  for (const it of items) {
+    let best = null;
+    let bestDiff = 3.8;
+    for (const r of rawRows) {
+      const d = Math.abs(r.dy - it.dy);
+      if (d <= bestDiff) { bestDiff = d; best = r; }
+    }
+    if (!best) {
+      best = { dy: it.dy, toks: [] };
+      rawRows.push(best);
+    } else {
+      const n = best.toks.length;
+      best.dy = (best.dy * n + it.dy) / (n + 1);
+    }
+    best.toks.push(it.tok);
+  }
+
+  rawRows.sort((a, b) => b.dy - a.dy);
+
+  const finalRows = [];
+  for (let rIdx = 0; rIdx < rawRows.length; rIdx++) {
+    const rr = rawRows[rIdx];
+    rr.toks.sort((a, b) => a.x - b.x);
+    let y = Math.max(18, Math.min(pageH - 18, rr.dy));
+    if (finalRows.length > 0 && finalRows[finalRows.length - 1].y - y < 7.0) {
+      y = Math.max(14, finalRows[finalRows.length - 1].y - 7.5);
+    }
+    const isHeader = (rIdx === 0 && y > pageH * 0.87);
+
+    // Group row tokens into segments (phrases / columns)
+    const groups = [];
+    for (const t of rr.toks) {
+      if (groups.length === 0) {
+        groups.push([t]);
+      } else {
+        const curG = groups[groups.length - 1];
+        const prev = curG[curG.length - 1];
+        const estW = (prev.width || (prev.text.length * prev.fontSize * 0.48));
+        const gap = t.x - (prev.x + estW);
+        const colSplit = isHeader ? 18 : Math.max(20, prev.fontSize * 2.1);
+
+        if (gap > colSplit) {
+          groups.push([t]);
+        } else {
+          curG.push(t);
+        }
+      }
+    }
+
+    const segments = [];
+    for (const grp of groups) {
+      let joined = '';
+      for (let k = 0; k < grp.length; k++) {
+        const tk = grp[k];
+        if (k === 0) {
+          joined = tk.text;
+        } else {
+          const prev = grp[k - 1];
+          const prevEstW = (prev.width || (prev.text.length * prev.fontSize * 0.46));
+          const gap = tk.x - (prev.x + prevEstW);
+          const joinTight = !prev.trailingSpace && !tk.leadingSpace && (
+            (rawPage.needsBanglaLineReorder && gap < prev.fontSize * 0.55) ||
+            (!rawPage.needsBanglaLineReorder && gap < prev.fontSize * 0.28)
+          );
+          joined += (joinTight ? '' : ' ') + tk.text;
+        }
+      }
+      if (rawPage.needsBanglaLineReorder) {
+        joined = reorderVisualBangla(joined);
+      }
+      const cleaned = cleanTextLine(joined, isHeader, opts.cleanTypos);
+      if (!cleaned) continue;
+
+      const sizes = grp.map(g => g.fontSize).sort((a, b) => a - b);
+      const medSize = sizes[sizes.length >> 1];
+      const anyBold = grp.some(g => g.bold) || (groups.length === 1 && /^[A-Z][A-Z\s0-9\-—.,()]{4,}$/.test(cleaned));
+
+      segments.push({
+        x: Math.max(20, Math.min(pageW - 25, grp[0].x)),
+        fontSize: Math.max(8, Math.min(20, medSize)),
+        bold: anyBold,
+        text: cleaned
+      });
+    }
+
+    if (segments.length > 0) {
+      finalRows.push({ y, isHeader, segments });
+    }
+  }
+
+  return { pageNumber, width: pageW, height: pageH, rows: finalRows, editedText: null };
+}
+
+function pageRowsToPlainText(pageObj) {
+  if (pageObj.editedText !== null) return pageObj.editedText;
+  return pageObj.rows.map(r => r.segments.map(s => s.text).join('    ')).join('\n');
+}
+
+function detectAllBookmarks(pages) {
+  const bms = [];
+  const seen = new Set();
+  bms.push({ title: 'Page 1 — Start', pageIndex: 0 });
+
+  for (let i = 0; i < pages.length; i++) {
+    const rows = pages[i].rows.slice(0, 8);
+    for (const r of rows) {
+      const line = r.segments.map(s => s.text).join(' ').trim();
+      let title = null;
+      if (/^FOREWORD\b/i.test(line)) title = `Foreword (p. ${pages[i].pageNumber})`;
+      else if (/^PREFACE\b/i.test(line)) title = 'Preface';
+      else if (/^TABLE OF CONTENTS\b/i.test(line)) title = 'Table of Contents';
+      else if (/^CHAPTER\s+[IVXLCDM0-9]+\b/i.test(line) && line.length < 60) title = line;
+      else if (/^APPENDIX\s+(NO\.\s*)?[0-9A-Z\-]+/i.test(line) && line.length < 65) title = line;
+      else if (/^(INDEX|SUPPLEMENT)$/i.test(line)) title = line;
+      else if (/^(প্রস্তাবনা|[০-৯0-9]{1,2}।\s*[^\n]{3,48})/.test(line) && line.endsWith(':')) title = line.replace(/:$/, '');
+
+      if (title && !seen.has(title.toLowerCase())) {
+        seen.add(title.toLowerCase());
+        bms.push({ title, pageIndex: i });
+      }
+    }
+  }
+  return bms;
+}
+
+// -------------------- PAGE RANGE PARSER --------------------
+function parsePageSelection(input, maxPages) {
+  const s = (input || '').trim();
+  if (!s || /^all$/i.test(s)) {
+    return Array.from({ length: maxPages }, (_, i) => i + 1);
+  }
+  const set = new Set();
+  for (const part of s.split(',')) {
+    const p = part.trim();
+    if (!p) continue;
+    const m = p.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (m) {
+      const a = Math.max(1, parseInt(m[1], 10));
+      const b = Math.min(maxPages, parseInt(m[2], 10));
+      for (let k = Math.min(a, b); k <= Math.max(a, b); k++) set.add(k);
+    } else if (/^\d+$/.test(p)) {
+      const n = parseInt(p, 10);
+      if (n >= 1 && n <= maxPages) set.add(n);
+    }
+  }
+  const arr = Array.from(set).sort((a, b) => a - b);
+  return arr.length > 0 ? arr : Array.from({ length: maxPages }, (_, i) => i + 1);
+}
+
+// -------------------- MAIN CONVERSION PIPELINE --------------------
+el('convertBtn').addEventListener('click', runConversion);
+
+async function runConversion() {
+  if (!state.pdfBytes) return;
+  state.stopRequested = false;
+  state.pages = [];
+  state.bookmarks = [];
+
+  el('convertBtn').disabled = true;
+  el('stopBtn').style.display = 'inline-block';
+  el('progressBox').classList.add('active');
+  el('resultsSection').classList.remove('active');
+
+  const opts = {
+    mode: el('modeSelect').value,
+    ocrLang: el('ocrLangSelect').value,
+    cleanTypos: el('chkCleanTypos').checked,
+    deskew: el('chkDeskew').checked,
+    cleanCover: el('chkCleanCover').checked
+  };
+
+  const selectedPages = parsePageSelection(el('pageRangeInput').value, state.totalPages);
+  const startTime = performance.now();
+
+  let pdfDoc = null;
+  let ocrWorker = null;
+
+  try {
+    // 1. Inspect binary fonts for Bijoy / Nikosh GSUB if mode is auto or bangla-font
+    let binCtx = null;
+    if (opts.mode === 'auto' || opts.mode === 'bangla-font') {
+      el('statusLog').textContent = 'Analyzing embedded PDF TrueType & OpenType GSUB tables...';
+      await new Promise(r => setTimeout(r, 15));
+      binCtx = analyzeBinaryPdfFonts(state.pdfBytes);
+    }
+
+    const useBinaryBangla = (opts.mode === 'bangla-font') || (opts.mode === 'auto' && binCtx && binCtx.hasSpecialBangla);
+
+    if (!useBinaryBangla || opts.mode === 'ocr') {
+      pdfDoc = await pdfjsLib.getDocument({ data: state.pdfBytes.slice() }).promise;
+    }
+
+    let modeLabel = useBinaryBangla ? 'Bangla Bijoy + OpenType GSUB Decoder' : (opts.mode === 'ocr' ? 'Fresh Tesseract OCR' : 'Digital / Hidden-OCR Reconstructor');
+
+    for (let idx = 0; idx < selectedPages.length; idx++) {
+      if (state.stopRequested) break;
+
+      const pageNum = selectedPages[idx];
+      const pct = Math.round(((idx) / selectedPages.length) * 100);
+      el('progressFill').style.width = `${pct}%`;
+      el('progressLabel').textContent = `Processing Page ${pageNum} (${idx + 1} of ${selectedPages.length})`;
+      el('progressStats').textContent = `${pct}%`;
+      el('statusLog').textContent = `Pipeline: ${modeLabel}`;
+
+      // Yield to browser UI every page so memory frees & progress animates smoothly
+      if (idx % 3 === 0) await new Promise(r => setTimeout(r, 0));
+
+      let rawPage = null;
+
+      if (useBinaryBangla && opts.mode !== 'ocr' && pageNum - 1 < binCtx.pageIds.length) {
+        rawPage = extractPageViaBinaryBangla(binCtx, pageNum - 1);
+      }
+
+      if ((!rawPage || rawPage.tokens.length === 0) && opts.mode !== 'ocr') {
+        if (!pdfDoc) pdfDoc = await pdfjsLib.getDocument({ data: state.pdfBytes.slice() }).promise;
+        const page = await pdfDoc.getPage(pageNum);
+        const vp = page.getViewport({ scale: 1.0 });
+        const tc = await page.getTextContent();
+        const toks = [];
+        for (const item of tc.items) {
+          if (!item.str || !item.str.trim()) continue;
+          const tx = item.transform[4];
+          const ty = item.transform[5];
+          const fSize = Math.hypot(item.transform[0], item.transform[1]) || item.height || 10;
+          toks.push({
+            x: tx,
+            y: ty,
+            width: item.width || 0,
+            fontSize: fSize,
+            bold: /Bold/i.test(item.fontName || ''),
+            text: item.str.trim(),
+            trailingSpace: item.str.endsWith(' ')
+          });
+        }
+        rawPage = { width: vp.width, height: vp.height, tokens: toks, needsBanglaLineReorder: false };
+        page.cleanup();
+      }
+
+      // Fallback to Tesseract.js OCR if page has virtually no text or Force OCR selected
+      const charCount = rawPage ? rawPage.tokens.reduce((s, t) => s + t.text.length, 0) : 0;
+      if (opts.mode === 'ocr' || charCount < 6) {
+        if (!pdfDoc) pdfDoc = await pdfjsLib.getDocument({ data: state.pdfBytes.slice() }).promise;
+        if (!ocrWorker) {
+          el('statusLog').textContent = `Loading Tesseract OCR (${opts.ocrLang}) — cached after first download...`;
+          ocrWorker = await Tesseract.createWorker(opts.ocrLang);
+        }
+        modeLabel = `Tesseract OCR (${opts.ocrLang})`;
+        el('statusLog').textContent = `Running OCR on Page ${pageNum}...`;
+
+        const page = await pdfDoc.getPage(pageNum);
+        const scale = 2.0;
+        const vp = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.floor(vp.width);
+        canvas.height = Math.floor(vp.height);
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+        const { data } = await ocrWorker.recognize(canvas);
+        const ocrToks = [];
+        const origW = vp.width / scale;
+        const origH = vp.height / scale;
+
+        if (data && data.words) {
+          for (const w of data.words) {
+            const txt = (w.text || '').trim();
+            if (!txt) continue;
+            const x = w.bbox.x0 / scale;
+            const y = origH - (w.bbox.y1 / scale);
+            const h = Math.max(8, (w.bbox.y1 - w.bbox.y0) / scale * 0.85);
+            ocrToks.push({
+              x, y,
+              width: (w.bbox.x1 - w.bbox.x0) / scale,
+              fontSize: h,
+              bold: false,
+              text: txt,
+              trailingSpace: true
+            });
+          }
+        }
+
+        // Immediately release canvas memory
+        canvas.width = 0; canvas.height = 0;
+        page.cleanup();
+        rawPage = { width: origW, height: origH, tokens: ocrToks, needsBanglaLineReorder: false };
+      }
+
+      const structured = reconstructPageRows(rawPage, pageNum, opts);
+      state.pages.push(structured);
+    }
+
+    if (ocrWorker) await ocrWorker.terminate();
+    if (pdfDoc) await pdfDoc.destroy();
+
+    state.bookmarks = detectAllBookmarks(state.pages);
+
+    const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+    el('progressFill').style.width = '100%';
+    el('progressLabel').textContent = `Completed ${state.pages.length} page(s) in ${elapsed}s`;
+    el('progressStats').textContent = '100%';
+    el('statusLog').textContent = `Detected ${state.bookmarks.length} bookmarks • Ready to export PDF, EPUB, DOCX & TXT.`;
+    el('summaryBadge').textContent = `${state.pages.length} Pages • ${elapsed}s`;
+
+    renderEditorUI();
+    el('resultsSection').classList.add('active');
+    el('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    console.error(err);
+    alert('Conversion error: ' + err.message);
+  } finally {
+    el('convertBtn').disabled = false;
+    el('stopBtn').style.display = 'none';
+  }
+}
+
+// -------------------- LIVE PREVIEW & EDITOR --------------------
+function renderEditorUI() {
+  if (state.pages.length === 0) return;
+  state.currentViewIdx = 0;
+  el('pageTotalSpan').textContent = `of ${state.pages.length}`;
+  el('pageJumpInput').max = state.pages.length;
+
+  const bmBox = el('bookmarkList');
+  bmBox.innerHTML = '';
+  state.bookmarks.forEach((bm, idx) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'bm-item' + (idx === 0 ? ' active' : '');
+    btn.textContent = bm.title;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.bm-item').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      showPageInEditor(bm.pageIndex);
+    });
+    bmBox.appendChild(btn);
+  });
+
+  showPageInEditor(0);
+}
+
+function showPageInEditor(idx) {
+  if (idx < 0 || idx >= state.pages.length) return;
+  state.currentViewIdx = idx;
+  el('pageJumpInput').value = idx + 1;
+  el('pageEditor').value = pageRowsToPlainText(state.pages[idx]);
+}
+
+el('pageEditor').addEventListener('input', () => {
+  if (state.pages[state.currentViewIdx]) {
+    state.pages[state.currentViewIdx].editedText = el('pageEditor').value;
+  }
+});
+
+el('prevPageBtn').addEventListener('click', () => showPageInEditor(state.currentViewIdx - 1));
+el('nextPageBtn').addEventListener('click', () => showPageInEditor(state.currentViewIdx + 1));
+el('pageJumpInput').addEventListener('change', e => {
+  const v = parseInt(e.target.value, 10) - 1;
+  showPageInEditor(Math.max(0, Math.min(state.pages.length - 1, v)));
+});
+
+el('copyPageBtn').addEventListener('click', async () => {
+  await navigator.clipboard.writeText(el('pageEditor').value);
+  const orig = el('copyPageBtn').textContent;
+  el('copyPageBtn').textContent = '✓ Copied!';
+  setTimeout(() => el('copyPageBtn').textContent = orig, 1400);
+});
+
+// -------------------- FONT FETCHER FOR BANGLA PDF EXPORT --------------------
+const BN_FONT_URLS_REGULAR = [
+  'https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-serif-bengali@0.2.3/NotoSerifBengali_400Regular.ttf',
+  'https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts@main/hinted/ttf/NotoSerifBengali/NotoSerifBengali-Regular.ttf'
+];
+const BN_FONT_URLS_BOLD = [
+  'https://cdn.jsdelivr.net/npm/@expo-google-fonts/noto-serif-bengali@0.2.3/NotoSerifBengali_700Bold.ttf',
+  'https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts@main/hinted/ttf/NotoSerifBengali/NotoSerifBengali-Bold.ttf'
+];
+
+async function fetchFontWithFallback(urls) {
+  for (const url of urls) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return new Uint8Array(await res.arrayBuffer());
+    } catch (_) {}
+  }
+  throw new Error('Could not download Unicode Bangla font from CDN. Check internet connection.');
+}
+
+function hasNonWinAnsi(str) {
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    if (c > 255) {
+      if ('\u2013\u2014\u2018\u2019\u201C\u201D\u2022'.includes(str[i])) continue;
+      return true;
+    }
+  }
+  return false;
+}
+
+function toUtf16BeHex(str) {
+  let hex = 'FEFF';
+  for (let i = 0; i < str.length; i++) {
+    hex += str.charCodeAt(i).toString(16).toUpperCase().padStart(4, '0');
+  }
+  return hex;
+}
+
+// -------------------- 1. EXPORT EDITABLE PDF (.PDF) --------------------
+el('dlPdfBtn').addEventListener('click', async () => {
+  const btn = el('dlPdfBtn');
+  const origLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Building Editable PDF...';
+
+  try {
+    const { PDFDocument, StandardFonts, rgb, PDFName, PDFString, PDFArray, PDFDict, PDFNumber, pushGraphicsState, popGraphicsState, PDFOperator } = PDFLib;
+    const outDoc = await PDFDocument.create();
+    outDoc.setTitle(state.baseName);
+    outDoc.setSubject('Editable, Searchable, Copy-Pastable Edition');
+    outDoc.setCreator('PDF Studio Browser Converter');
+
+    const latinReg = await outDoc.embedFont(StandardFonts.TimesRoman);
+    const latinBold = await outDoc.embedFont(StandardFonts.TimesRomanBold);
+
+    // Check if document contains Bangla / Unicode > WinAnsi
+    let needsUnicodeFont = false;
+    for (const p of state.pages) {
+      const txt = pageRowsToPlainText(p);
+      if (hasNonWinAnsi(txt)) { needsUnicodeFont = true; break; }
+    }
+
+    let bnReg = null, bnBold = null;
+    if (needsUnicodeFont) {
+      btn.textContent = 'Loading Unicode Bangla Font...';
+      outDoc.registerFontkit(window.fontkit);
+      if (!state.cachedBnRegularBytes) state.cachedBnRegularBytes = await fetchFontWithFallback(BN_FONT_URLS_REGULAR);
+      if (!state.cachedBnBoldBytes) state.cachedBnBoldBytes = await fetchFontWithFallback(BN_FONT_URLS_BOLD);
+      bnReg = await outDoc.embedFont(state.cachedBnRegularBytes, { subset: false });
+      bnBold = await outDoc.embedFont(state.cachedBnBoldBytes, { subset: false });
+      btn.textContent = 'Typesetting Pages...';
+    }
+
+    const pdfPages = [];
+
+    for (const p of state.pages) {
+      const page = outDoc.addPage([p.width, p.height]);
+      pdfPages.push(page);
+
+      if (p.editedText !== null) {
+        // User manually edited this page in the live editor: render clean flowing lines
+        const lines = p.editedText.split('\n');
+        let curY = p.height - 42;
+        for (const ln of lines) {
+          if (curY < 28) break;
+          const trimmed = ln.trimEnd();
+          if (trimmed) {
+            const useUni = hasNonWinAnsi(trimmed);
+            const fnt = useUni ? (bnReg || latinReg) : latinReg;
+            drawCleanSegment(page, trimmed + ' ', 36, curY, 10.5, fnt, useUni, rgb);
+          }
+          curY -= 15.5;
+        }
+      } else {
+        for (const row of p.rows) {
+          for (let i = 0; i < row.segments.length; i++) {
+            const seg = row.segments[i];
+            const useUni = hasNonWinAnsi(seg.text);
+            const fnt = useUni
+              ? (seg.bold ? bnBold : bnReg)
+              : (seg.bold ? latinBold : latinReg);
+
+            let fontSize = seg.fontSize;
+            const maxRight = (i + 1 < row.segments.length) ? (row.segments[i + 1].x - 5) : (p.width - 20);
+            const natW = fnt.widthOfTextAtSize(seg.text, fontSize);
+            if (seg.x + natW > maxRight && natW > 1 && maxRight - seg.x > 15) {
+              fontSize = Math.max(7.2, fontSize * ((maxRight - seg.x) / natW));
+            }
+
+            const outStr = seg.text.endsWith('-') ? seg.text : (seg.text + ' ');
+            drawCleanSegment(page, outStr, seg.x, row.y, fontSize, fnt, useUni, rgb);
+          }
+        }
+      }
+    }
+
+    // Add PDF Outline Bookmarks
+    if (state.bookmarks.length > 0 && pdfPages.length > 0) {
+      addPdfOutlines(outDoc, pdfPages, state.bookmarks);
+    }
+
+    const pdfBytes = await outDoc.save();
+    triggerDownload(new Blob([pdfBytes], { type: 'application/pdf' }), `${state.baseName} (Editable).pdf`);
+  } catch (err) {
+    console.error(err);
+    alert('PDF Export Error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origLabel;
+  }
+});
+
+function drawCleanSegment(page, text, x, y, size, font, wrapActualText, rgb) {
+  if (wrapActualText && typeof PDFLib.PDFOperator !== 'undefined') {
+    const hex = toUtf16BeHex(text);
+    page.pushOperators(PDFLib.PDFOperator.of('BDC', [PDFLib.PDFName.of('Span'), page.doc.context.obj({ ActualText: PDFLib.PDFHexString.of(hex) })]));
+    page.drawText(text.trimEnd(), { x, y, size, font, color: rgb(0, 0, 0) });
+    page.pushOperators(PDFLib.PDFOperator.of('EMC'));
+  } else {
+    page.drawText(wrapActualText ? text.trimEnd() : text, { x, y, size, font, color: rgb(0, 0, 0) });
+  }
+}
+
+function addPdfOutlines(pdfDoc, pdfPages, bookmarks) {
+  try {
+    const ctx = pdfDoc.context;
+    const outlinesRef = ctx.nextRef();
+    const itemRefs = bookmarks.map(() => ctx.nextRef());
+
+    for (let i = 0; i < bookmarks.length; i++) {
+      const bm = bookmarks[i];
+      const targetPage = pdfPages[Math.min(pdfPages.length - 1, bm.pageIndex)];
+      const destArr = ctx.obj([targetPage.ref, PDFLib.PDFName.of('XYZ'), null, null, null]);
+      const dict = {
+        Title: PDFLib.PDFHexString.of(toUtf16BeHex(bm.title)),
+        Parent: outlinesRef,
+        Dest: destArr
+      };
+      if (i > 0) dict.Prev = itemRefs[i - 1];
+      if (i + 1 < bookmarks.length) dict.Next = itemRefs[i + 1];
+      ctx.assign(itemRefs[i], ctx.obj(dict));
+    }
+
+    ctx.assign(outlinesRef, ctx.obj({
+      Type: 'Outlines',
+      First: itemRefs[0],
+      Last: itemRefs[itemRefs.length - 1],
+      Count: bookmarks.length
+    }));
+    pdfDoc.catalog.set(PDFLib.PDFName.of('Outlines'), outlinesRef);
+  } catch (_) {}
+}
+
+// -------------------- 2. EXPORT REFLOWABLE EPUB 3 (.EPUB) --------------------
+el('dlEpubBtn').addEventListener('click', async () => {
+  const btn = el('dlEpubBtn');
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Packaging EPUB 3...';
+
+  try {
+    const zip = new JSZip();
+    // Spec requirement: uncompressed mimetype first
+    zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' });
+
+    zip.file('META-INF/container.xml', `<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>`);
+
+    zip.file('OEBPS/styles.css', `body { font-family: "Noto Serif Bengali", Georgia, serif; line-height: 1.7; margin: 1.2em; color: #111; }
+h1, h2, h3 { line-height: 1.35; margin-top: 1.4em; margin-bottom: 0.6em; }
+p { margin: 0.55em 0; text-align: justify; }
+table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.92em; }
+td, th { border: 1px solid #ccc; padding: 6px 8px; vertical-align: top; }`);
+
+    // Split pages into chapters using detected bookmarks
+    const chapters = buildReflowChapters();
+    const manifestItems = [
+      `<item id="css" href="styles.css" media-type="text/css"/>`,
+      `<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>`,
+      `<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>`
+    ];
+    const spineItems = [];
+    const navLinks = [];
+    const ncxPoints = [];
+
+    chapters.forEach((ch, idx) => {
+      const id = `chap_${idx + 1}`;
+      const href = `${id}.xhtml`;
+      manifestItems.push(`<item id="${id}" href="${href}" media-type="application/xhtml+xml"/>`);
+      spineItems.push(`<itemref idref="${id}"/>`);
+      navLinks.push(`<li><a href="${href}">${escXml(ch.title)}</a></li>`);
+      ncxPoints.push(`<navPoint id="np_${idx + 1}" playOrder="${idx + 1}"><navLabel><text>${escXml(ch.title)}</text></navLabel><content src="${href}"/></navPoint>`);
+
+      zip.file(`OEBPS/${href}`, `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="bn">
+<head><meta charset="UTF-8"/><title>${escXml(ch.title)}</title><link rel="stylesheet" type="text/css" href="styles.css"/></head>
+<body>
+<h2>${escXml(ch.title)}</h2>
+${ch.htmlBody}
+</body>
+</html>`);
+    });
+
+    const bookUuid = 'urn:uuid:' + cryptoRandomUuid();
+    const nowIso = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+
+    zip.file('OEBPS/nav.xhtml', `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head><meta charset="UTF-8"/><title>Table of Contents</title><link rel="stylesheet" type="text/css" href="styles.css"/></head>
+<body>
+<nav epub:type="toc" id="toc"><h1>Table of Contents</h1><ol>${navLinks.join('\n')}</ol></nav>
+</body>
+</html>`);
+
+    zip.file('OEBPS/toc.ncx', `<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+  <head><meta name="dtb:uid" content="${bookUuid}"/></head>
+  <docTitle><text>${escXml(state.baseName)}</text></docTitle>
+  <navMap>${ncxPoints.join('\n')}</navMap>
+</ncx>`);
+
+    zip.file('OEBPS/content.opf', `<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="BookId">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="BookId">${bookUuid}</dc:identifier>
+    <dc:title>${escXml(state.baseName)}</dc:title>
+    <dc:language>bn</dc:language>
+    <dc:language>en</dc:language>
+    <dc:creator>PDF Studio</dc:creator>
+    <meta property="dcterms:modified">${nowIso}</meta>
+  </metadata>
+  <manifest>${manifestItems.join('\n')}</manifest>
+  <spine toc="ncx">${spineItems.join('\n')}</spine>
+</package>`);
+
+    const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/epub+zip', compression: 'DEFLATE' });
+    triggerDownload(blob, `${state.baseName}.epub`);
+  } catch (err) {
+    alert('EPUB Error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+});
+
+function buildReflowChapters() {
+  const bms = state.bookmarks.length > 0 ? state.bookmarks : [{ title: state.baseName, pageIndex: 0 }];
+  const chapters = [];
+
+  for (let b = 0; b < bms.length; b++) {
+    const startIdx = bms[b].pageIndex;
+    const endIdx = (b + 1 < bms.length) ? bms[b + 1].pageIndex : state.pages.length;
+    if (endIdx <= startIdx && b > 0) continue;
+
+    const actualEnd = Math.max(startIdx + 1, endIdx);
+    const blocks = [];
+
+    for (let pIdx = startIdx; pIdx < actualEnd && pIdx < state.pages.length; pIdx++) {
+      const p = state.pages[pIdx];
+      if (p.editedText !== null) {
+        for (const para of p.editedText.split(/\n{2,}|\n/)) {
+          if (para.trim()) blocks.push(`<p>${escXml(para.trim())}</p>`);
+        }
+        continue;
+      }
+
+      let curPara = '';
+      const flushPara = () => {
+        if (curPara.trim()) {
+          blocks.push(`<p>${escXml(curPara.trim())}</p>`);
+          curPara = '';
+        }
+      };
+
+      for (let r = 0; r < p.rows.length; r++) {
+        const row = p.rows[r];
+        // Skip repetitive page running headers in reflowable EPUB
+        if (row.isHeader && p.rows.length > 3 && (row.segments.length > 1 || /^\d+$/.test(row.segments[0].text))) {
+          continue;
+        }
+        if (row.segments.length > 1) {
+          flushPara();
+          const tds = row.segments.map(s => `<td>${escXml(s.text)}</td>`).join('');
+          blocks.push(`<table><tr>${tds}</tr></table>`);
+        } else {
+          const txt = row.segments[0].text;
+          if (row.segments[0].bold && txt.length < 80) {
+            flushPara();
+            blocks.push(`<h3>${escXml(txt)}</h3>`);
+          } else {
+            if (curPara.endsWith('-') && /^[a-z]/.test(txt)) {
+              curPara = curPara.slice(0, -1) + txt;
+            } else {
+              // Start new paragraph on clause markers like (a), (1), 1., Note—
+              if (/^(\([a-z0-9ivx]+\)|[0-9০-৯]+[.|।]|Note\b)/i.test(txt)) flushPara();
+              curPara += (curPara ? ' ' : '') + txt;
+            }
+          }
+        }
+      }
+      flushPara();
+    }
+
+    chapters.push({
+      title: bms[b].title,
+      htmlBody: blocks.join('\n') || '<p></p>'
+    });
+  }
+  return chapters;
+}
+
+// -------------------- 3. EXPORT MICROSOFT WORD (.DOCX) --------------------
+el('dlDocxBtn').addEventListener('click', async () => {
+  const btn = el('dlDocxBtn');
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Building Word .DOCX...';
+
+  try {
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>`);
+
+    zip.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`);
+
+    zip.file('word/_rels/document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`);
+
+    zip.file('word/styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault>
+      <w:rPr>
+        <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Nirmala UI" w:eastAsia="Nirmala UI"/>
+        <w:sz w:val="22"/><w:szCs w:val="22"/>
+      </w:rPr>
+    </w:rPrDefault>
+  </w:docDefaults>
+</w:styles>`);
+
+    const bodyXml = [];
+    state.pages.forEach((p, pIdx) => {
+      if (pIdx > 0) {
+        bodyXml.push(`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`);
+      }
+      if (p.editedText !== null) {
+        for (const line of p.editedText.split('\n')) {
+          bodyXml.push(makeDocxParagraph(line, false, 0));
+        }
+      } else {
+        for (const row of p.rows) {
+          if (row.segments.length > 1) {
+            const cells = row.segments.map(s => `<w:tc><w:p><w:r>${s.bold ? '<w:rPr><w:b/></w:rPr>' : ''}<w:t xml:space="preserve">${escXml(s.text)}</w:t></w:r></w:p></w:tc>`).join('');
+            bodyXml.push(`<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/></w:tblPr><w:tr>${cells}</w:tr></w:tbl>`);
+          } else {
+            const seg = row.segments[0];
+            const indentTwips = Math.max(0, Math.round((seg.x - 36) * 15));
+            bodyXml.push(makeDocxParagraph(seg.text, seg.bold, indentTwips));
+          }
+        }
+      }
+    });
+
+    zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    ${bodyXml.join('\n')}
+    <w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080"/></w:sectPr>
+  </w:body>
+</w:document>`);
+
+    const blob = await zip.generateAsync({
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      compression: 'DEFLATE'
+    });
+    triggerDownload(blob, `${state.baseName} (Editable).docx`);
+  } catch (err) {
+    alert('DOCX Error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+});
+
+function makeDocxParagraph(text, bold, leftTwips) {
+  const pPr = leftTwips > 80 ? `<w:pPr><w:ind w:left="${leftTwips}"/></w:pPr>` : '';
+  const rPr = bold ? '<w:rPr><w:b/><w:bCs/></w:rPr>' : '';
+  return `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${escXml(text)}</w:t></w:r></w:p>`;
+}
+
+// -------------------- 4. EXPORT TXT & COPY ALL --------------------
+function getAllText() {
+  return state.pages.map(p => `--- Page ${p.pageNumber} ---\n` + pageRowsToPlainText(p)).join('\n\n');
+}
+
+el('dlTxtBtn').addEventListener('click', () => {
+  const blob = new Blob(['\uFEFF' + getAllText()], { type: 'text/plain;charset=utf-8' });
+  triggerDownload(blob, `${state.baseName}.txt`);
+});
+
+el('copyAllBtn').addEventListener('click', async () => {
+  await navigator.clipboard.writeText(getAllText());
+  const orig = el('copyAllBtn').textContent;
+  el('copyAllBtn').textContent = '✓ Copied!';
+  setTimeout(() => el('copyAllBtn').textContent = orig, 1500);
+});
+
+// -------------------- HELPERS --------------------
+function escXml(s) {
+  return String(s || '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function cryptoRandomUuid() {
+  if (crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+</script>
+</body>
+</html>
